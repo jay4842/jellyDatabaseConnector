@@ -1,0 +1,3 @@
+sql_env/
+.env
+*.pyc
