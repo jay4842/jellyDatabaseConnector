@@ -1,4 +1,4 @@
-from src.queryEngine import QueryEngine
+from jellyConnect.queryEngine import QueryEngine
 from dotenv import load_dotenv
 import pytest
 import os
