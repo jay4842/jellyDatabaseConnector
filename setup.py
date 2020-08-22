@@ -8,13 +8,14 @@ setuptools.setup(
   version='0.1.0',
   author='Jimmy Johnson III',
   author_email='jay4842@gmail.com',
-  description='A database connector wrapper',
+  description="A database connector wrapper",
   long_description=long_description,
+  long_description_content_type='text/markdown',
   url='https://github.com/jay4842/jellyDatabaseConnector',
   packages=setuptools.find_packages(),
     classifiers=[
         "Programming Language :: Python :: 3",
-        "License :: OSI Approved :: Apache License",
+        "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
     ],
     python_requires='>=3.6'

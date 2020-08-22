@@ -143,6 +143,30 @@ class MySqlConnection():
       self.sql_conn.close()
       return []
     #
+    print(type(data))
+
+    if(type(data) == dict):   
+      data = list(data.values())
+
+    elif(type(data) == tuple or type(data) == list):
+      #print(data)
+      if(len(data) >= 1 and type(data[0]) == dict):
+        data_fix = []
+        for row in data:
+          data_fix.append(list(row.values()))
+        data = data_fix
+      if(len(data) >= 1 and type(data[0]) == tuple):
+        data_fix = []
+        for row in data:
+          data_fix.append(list(row))
+        data = data_fix
+      data = list(data)
+    else:
+      data = list(data)
+
+    if(len(data) > 1):
+      data = [data] # so we return a list of results
+
     cursor.close()
     self.sql_conn.close()
     return data
