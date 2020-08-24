@@ -19,7 +19,7 @@ def ping_mysql_server(host):
 
 class QueryEngine():
   """ How queries will be called. Will overllay the connector types like mysql or sqlite """
-    
+
   def __init__(self, db_type='mysql', sql_host=None, sql_user=None, 
               sql_pass=None, sql_db_name=None, ssh_host=None, ssh_user=None, ssh_pass=None,
               ssh_key=None, local_db=False, db_file=None, debug=False, log_func=print):
@@ -34,6 +34,7 @@ class QueryEngine():
     Returns:
         QueryEngine object
     """
+
     self.db_type = db_type
     self.db = None
     if(db_type == 'mysql'):
@@ -66,24 +67,21 @@ class QueryEngine():
     Returns:
         list(list): a list of query results in the form of a list
     """
-    if(self.debug):
-      self.output_func('creating execution process')
 
-    ping_mysql_server()
+    ping_mysql_server(os.getenv('SSH_HOST'))
     results = []
     if(values != None and len(queries) != len(values)):
-      self.output_func('queries and values should be the same length!')
       return results
 
     for idx,query in enumerate(queries):
       if(values != None):
-        results.append(self.db.execute_query(query, values=values[idx]))
+        results.append(self.execute_query(query, values=values[idx], close=False))
       else:
-        results.append(self.db.execute_query(query))
+        results.append(self.execute_query(query, close=False))
     self.db.close_connection()
     return results
     
-  def execute_query(self, query, values=None):
+  def execute_query(self, query, values=None, max_fails=10, close=True):
     """execute a single query string.
 
     Args:
@@ -93,10 +91,19 @@ class QueryEngine():
     Returns:
       list of values
     """
-    result = self.db.execute_query(query, values)
-    if (self.db_type == 'sqlite'):
-      result = [result]
-    self.db.close_connection()
+    fails = 0
+    result = []
+    while(fails < max_fails):
+      try:
+        result = self.db.execute_query(query, values)
+        if (self.db_type == 'sqlite'):
+          result = [result]
+        if(close):
+          self.db.close_connection()
+        return result
+      except (TypeError, AttributeError, self.db.pymysql.err.OperationalError) as ex:
+        fails += 1
+        print(ex)
     return result
     
   def update(self):
@@ -126,16 +133,17 @@ class QueryEngine():
         str: the instert prepared statement
     """
     if(self.db_type == 'mysql'):
-      ref_schema = self.execute_query(f'desc {table_name};')
+      ref_schema = self.execute_query(f'desc {table_name};')[0]
+      #print(ref_schema)
       keys = [] # the keys that are valid for insert
       value_placeholders = []
       for item in ref_schema:
         if('auto_increment' not in item and 'DEFAULT_GENERATED' not in item):
           keys.append(item[0])
           value_placeholders.append('%s')
-        keys = tuple(keys)
-        value_placeholders = tuple(value_placeholders)
-        statement = f'INSERT INTO {table_name}{keys} VALUES{value_placeholders}'.replace('\'', '')
+      keys = tuple(keys)
+      value_placeholders = tuple(value_placeholders)
+      statement = f'INSERT INTO {table_name}{keys} VALUES{value_placeholders}'.replace('\'', '')
       if(len(keys) == 1):
         statement = statement.replace(',','')
       return statement
@@ -163,7 +171,7 @@ class QueryEngine():
     Returns:
         str : query string for an update call
     """
-    stock_ref_schema = self.execute_query(f'desc {table_name};')
+    stock_ref_schema = self.execute_query(f'desc {table_name};')[0]
     statement = f'UPDATE {table_name} '
     for idx, item in enumerate(stock_ref_schema):
       if('auto_increment' not in item):
